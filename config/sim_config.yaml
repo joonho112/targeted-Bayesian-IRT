@@ -1,0 +1,187 @@
+# =============================================================================
+# Master Configuration: Targeted Bayesian IRT Simulation Study
+# =============================================================================
+# Description:
+#   Full factorial design evaluating DP mixture priors + posterior summary
+#   methods (PM/CB/GR) for person-specific trait estimation in IRT models.
+#
+# Author: JoonHo Lee
+# Date: February 2026
+# =============================================================================
+
+
+# ---------------------------------------------------------------------------
+# 1. Simulation Design: Factorial Conditions
+# ---------------------------------------------------------------------------
+design:
+  irt_models:
+    - "rasch"
+    - "2pl"
+
+  latent_shapes:
+    - "normal"
+    - "bimodal"
+    - "skew_pos"
+
+  sample_sizes:
+    - 50
+    - 100
+    - 200
+    - 500
+
+  n_items: 25                # Fixed across all conditions
+
+  target_rhos:
+    - 0.5
+    - 0.6
+    - 0.7
+    - 0.8
+    - 0.9
+
+  replications: 100          # K: number of replications per condition
+
+
+# ---------------------------------------------------------------------------
+# 2. Prior Specifications
+# ---------------------------------------------------------------------------
+priors:
+  gaussian:
+    label: "Gaussian"
+    type: "normal"
+    # Standard normal prior on theta (NIMBLE default)
+
+  dp_broad:
+    label: "DP-Broad"
+    type: "dpm"
+    mu_K_fraction: 0.2       # mu_K = 0.2 * N
+    confidence: "low"        # VIF = 5.0 (wide prior)
+
+  dp_focused:
+    label: "DP-Focused"
+    type: "dpm"
+    mu_K_fraction: 0.1       # mu_K = 0.1 * N
+    confidence: "medium"     # VIF = 2.5 (moderate prior)
+
+
+# ---------------------------------------------------------------------------
+# 3. Posterior Summary Methods
+# ---------------------------------------------------------------------------
+summary_methods:
+  - "pm"                     # Posterior Mean (Goal 1: individual MSE)
+  - "cb"                     # Constrained Bayes (Goal 3: EDF recovery)
+  - "gr"                     # Triple-Goal / GR (Goals 2+3: rank + EDF)
+
+
+# ---------------------------------------------------------------------------
+# 4. Loss Function Metrics
+# ---------------------------------------------------------------------------
+metrics:
+  - "rmse"                   # sqrt(MSEL) = sqrt(mean((est - true)^2))
+  - "mselp"                  # MSE of normalized ranks
+  - "ks"                     # Kolmogorov-Smirnov distance
+
+
+# ---------------------------------------------------------------------------
+# 5. MCMC Settings
+# ---------------------------------------------------------------------------
+mcmc:
+  niter: 10000               # Total MCMC iterations
+  nburnin: 2000              # Burn-in iterations to discard
+  thin: 1                    # Thinning interval for main parameters
+  nchains: 1                 # Number of MCMC chains per model fit
+  M_dpm: 50                  # Maximum clusters for CRP truncation
+
+
+# ---------------------------------------------------------------------------
+# 6. EQC Calibration Settings
+# ---------------------------------------------------------------------------
+calibration:
+  M_quadrature: 10000        # Quadrature sample size for EQC
+  c_bounds:
+    - 0.3
+    - 3.0
+  tol: 0.0001               # Root-finding tolerance
+  reliability_metric: "info" # Average-information (tilde); monotone in c
+  item_source: "irw"         # Item Response Warehouse (empirical item pools)
+
+
+# ---------------------------------------------------------------------------
+# 7. Scaled EDF Settings
+# ---------------------------------------------------------------------------
+scaled_edf:
+  n_bins: 50                 # Number of histogram bins
+  theta_range:
+    - -6.0
+    - 6.0
+  n_superpop: 100000         # Super-population draws for reference density
+
+
+# ---------------------------------------------------------------------------
+# 8. Paths
+# ---------------------------------------------------------------------------
+paths:
+  project_root: "."          # Overridden programmatically at runtime
+  output_dir: "output"
+  calibration_dir: "output/calibration"
+  posteriors_dir: "output/posteriors"
+  results_dir: "output/results"
+  figures_dir: "output/figures"
+  checkpoint_dir: "output/results/checkpoints"
+
+
+# ---------------------------------------------------------------------------
+# 9. Parallel Processing
+# ---------------------------------------------------------------------------
+parallel:
+  strategy: "multisession"   # future::plan() strategy
+  n_workers: 4               # Number of parallel workers
+  chunk_size: 10             # Replications per chunk (for progress tracking)
+
+
+# ---------------------------------------------------------------------------
+# 10. Seed Management
+# ---------------------------------------------------------------------------
+seeds:
+  master_seed: 20260213      # Master seed; all others derive from this
+  # Per-condition seed: digest::digest2int(paste(master_seed, condition_id))
+  # Per-replication seed: condition_seed + rep_id
+  # Per-model seed: rep_seed + prior_index (1=Gaussian, 2=DP-Broad, 3=DP-Focused)
+
+
+# ---------------------------------------------------------------------------
+# 11. Checkpointing
+# ---------------------------------------------------------------------------
+checkpointing:
+  enabled: true
+  save_every_n_reps: 1       # Save checkpoint after every replication
+  file_pattern: "checkpoint_{condition_id}_rep{rep_id}.rds"
+
+
+# ---------------------------------------------------------------------------
+# 12. Posterior Storage
+# ---------------------------------------------------------------------------
+posterior_storage:
+  save_posteriors: true       # Save full posterior draws to disk
+  file_pattern: "{condition_id}/{prior}/{rep_id}.rds"
+  # Estimated size per file:
+  #   (niter - nburnin) * N * 8 bytes = 8000 * 500 * 8 = ~30 MB (largest N)
+  #   Total: 2 * 3 * 4 * 5 * 100 * 3 files * ~10MB avg = ~360 GB
+  compress: true              # Use saveRDS compression
+
+
+# ---------------------------------------------------------------------------
+# 13. Meta-Regression Settings
+# ---------------------------------------------------------------------------
+meta_regression:
+  formula: "log(metric) ~ (N + rho + prior + summary)^2"
+  cluster_var: "condition_id" # For cluster-robust standard errors
+  vcov_type: "HC1"           # Heteroskedasticity-consistent SEs
+
+
+# ---------------------------------------------------------------------------
+# 14. Logging
+# ---------------------------------------------------------------------------
+logging:
+  verbose: true
+  log_file: "output/simulation_log.txt"
+  timestamp_format: "%Y-%m-%d %H:%M:%S"
