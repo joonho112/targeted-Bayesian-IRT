@@ -140,7 +140,7 @@ github_packages <- list(
     purpose  = "Bayesian IRT with DP mixture priors"
   ),
   irw = list(
-    repo     = "joonho112/irw",
+    repo     = "itemresponsewarehouse/Rpkg",
     min_ver  = "1.0.0",
     purpose  = "Item Response Warehouse (empirical item pools)"
   )
@@ -422,3 +422,4 @@ if (length(errors) == 0 && length(warnings) == 0) {
   }
 }
 cat("==============================================================\n\n")
+
