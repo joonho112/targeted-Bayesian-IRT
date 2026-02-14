@@ -85,8 +85,8 @@ metrics:
 # 5. MCMC Settings
 # ---------------------------------------------------------------------------
 mcmc:
-  niter: 10000               # Total MCMC iterations
-  nburnin: 2000              # Burn-in iterations to discard
+  niter: 5000                # Total MCMC iterations
+  nburnin: 1000              # Burn-in iterations to discard
   thin: 1                    # Thinning interval for main parameters
   nchains: 1                 # Number of MCMC chains per model fit
   M_dpm: 50                  # Maximum clusters for CRP truncation
@@ -134,7 +134,7 @@ paths:
 # ---------------------------------------------------------------------------
 parallel:
   strategy: "multisession"   # future::plan() strategy
-  n_workers: 4               # Number of parallel workers
+  n_workers: 31              # Number of parallel workers (32-core VM, 31 workers + 1 main)
   chunk_size: 10             # Replications per chunk (for progress tracking)
 
 
@@ -164,8 +164,8 @@ posterior_storage:
   save_posteriors: true       # Save full posterior draws to disk
   file_pattern: "{condition_id}/{prior}/{rep_id}.rds"
   # Estimated size per file:
-  #   (niter - nburnin) * N * 8 bytes = 8000 * 500 * 8 = ~30 MB (largest N)
-  #   Total: 2 * 3 * 4 * 5 * 100 * 3 files * ~10MB avg = ~360 GB
+  #   (niter - nburnin) * N * 8 bytes = 4000 * 500 * 8 = ~15 MB (largest N)
+  #   Total: 2 * 3 * 4 * 5 * 100 * 3 files * ~5MB avg = ~180 GB
   compress: true              # Use saveRDS compression
 
 

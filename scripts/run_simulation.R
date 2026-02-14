@@ -3,9 +3,10 @@
 # run_simulation.R  —  Master Orchestration Script (Parallel)
 # =============================================================================
 # Runs the full simulation study with configurable scope:
-#   --pilot      : 4 conditions x 3 reps (for testing)
-#   --subset N   : First N conditions x full reps
-#   (default)    : All 120 conditions x K reps
+#   --pilot          : 4 conditions x 3 reps (for testing)
+#   --subset N       : First N conditions x full reps
+#   --start S --end E: Conditions S through E (inclusive), full reps
+#   (default)        : All 120 conditions x K reps
 #
 # Parallelization: condition-SEQUENTIAL, replication-PARALLEL
 #   Uses future::multisession to distribute replications across workers.
@@ -14,6 +15,7 @@
 # Usage:
 #   Rscript scripts/run_simulation.R --pilot
 #   Rscript scripts/run_simulation.R --subset 10
+#   Rscript scripts/run_simulation.R --start 1 --end 30
 #   Rscript scripts/run_simulation.R
 #
 # The script is checkpoint-aware: it skips replications that already have
@@ -49,6 +51,18 @@ if ("--subset" %in% args) {
   if (idx < length(args)) subset_n <- as.integer(args[idx + 1])
 }
 
+start_cond <- NA
+if ("--start" %in% args) {
+  idx <- which(args == "--start")
+  if (idx < length(args)) start_cond <- as.integer(args[idx + 1])
+}
+
+end_cond <- NA
+if ("--end" %in% args) {
+  idx <- which(args == "--end")
+  if (idx < length(args)) end_cond <- as.integer(args[idx + 1])
+}
+
 sequential_mode <- "--sequential" %in% args
 
 # =============================================================================
@@ -76,6 +90,9 @@ if (pilot_mode) {
       (irt_model == "2pl"   & latent_shape == "normal"   & N == 100 & target_rho == 0.50) |
       (irt_model == "2pl"   & latent_shape == "skew_pos" & N == 50  & target_rho == 0.90)
     )
+} else if (!is.na(start_cond) && !is.na(end_cond)) {
+  conditions <- design %>% filter(condition_id >= start_cond & condition_id <= end_cond)
+  cat(sprintf("=== BATCH MODE: conditions %d-%d ===\n\n", start_cond, end_cond))
 } else if (!is.na(subset_n)) {
   conditions <- design %>% slice(1:min(subset_n, nrow(design)))
 } else {
